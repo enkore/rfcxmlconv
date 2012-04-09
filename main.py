@@ -241,7 +241,11 @@ if __name__ == "__main__":
 
 	args = parser.parse_args()
 
-	output = TeXOutput()
+	output = Output()
+	if args.format == "markdown":
+		output = MDOutput()
+	if args.format == "latex":
+		output = TeXOutput()
 
 	rfcp = RFCParser(ElementTree.fromstring(open(args.file).read()), output)
 	print output.getvalue()
