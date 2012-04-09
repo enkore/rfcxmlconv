@@ -17,8 +17,8 @@
 
 import argparse
 from xml.etree import ElementTree
-#XMLParser, TreeBuilder
 import datetime
+import re
 
 from cStringIO import StringIO
 
@@ -56,7 +56,69 @@ class Output():
 		print text
 
 class TeXOutput(Output):
-	pass
+	_section_labels = ["section", "subsection", "subsubsection"]
+	_list_styles = {
+		"numbers": "enumerate",
+		"symbols": "itemize",
+		"hanging": "description",
+		"empty": "itemize",
+	}
+
+	def __init__(self):
+		self.o = StringIO()
+
+	def _escape(self, text):
+		if type(text).__name__ == "dict":
+			for key, item in text.items():
+				text[key] = self._escape(item)
+		if type(text).__name__ == "list":
+			for i, item in enumerate(text):
+				text[i] = self._escape(item)
+		if type(text).__name__ == "str" or type(text).__name__ == "unicode":
+			text = text.replace("\\", "\\textbackslash ")
+			text = text.replace("~", "\\textasciitilde ")
+			text = re.sub(r"(\$|%|{|}|\[|\])", r"\\\1", text)
+		return text
+
+	def getvalue(self):
+		return self.o.getvalue() + "\\end{document}"
+
+	def Metadata(self, data):
+		data = self._escape(data)
+
+		at = unicode()
+		data["authors"] = "\\and ".join([e["fullname"] for e in data["authors"]])
+
+		preamble = open("preamble.tex").read() % data
+
+		self.o.write(preamble)
+
+	def AppendSection(self, title, text, level):
+		title = self._escape(title)
+
+		self.o.write("\\" + self._section_labels[level] + "{" + title + "}\n")
+
+		for element in list(text):
+			if element.tag == "section":
+				continue
+
+			if element.tag == "t" and element.text:
+				self.o.write(self._escape(element.text) + "\n")
+			if element.tag == "list":
+				style = self._list_styles[element.get("style")]
+				
+				self.o.write("\\begin{" + style + "}")
+				for point in list(element):
+					if style == "description":
+						self.o.write("\\item[" + self._escape(point.get("hangText")) + "] ")
+					else:
+						self.o.write("\\item ")
+					self.o.write(self._escape(point.text))
+				self.o.write("\\end{" + style + "}")
+			if element.tag == "texttable":
+				self.o.write("(Here would be a table, but that's not implemented yet. Sorry!\n")
+
+			self.o.write("\n")
 
 class MDOutput(Output):
 	def __init__(self):
@@ -87,8 +149,7 @@ Authors
 		for element in list(text):
 			if element.tag == "section":
 				continue
-
-			print element.tag
+			
 			if element.tag == "t" and element.text:
 				self.o.write(element.text + "\n")
 			if element.tag == "list":
@@ -153,7 +214,7 @@ if __name__ == "__main__":
 
 	args = parser.parse_args()
 
-	output = MDOutput()
+	output = TeXOutput()
 
 	rfcp = RFCParser(ElementTree.fromstring(open(args.file).read()), output)
 	print output.getvalue()
