@@ -16,10 +16,10 @@
 
 
 import argparse
-from xml.etree import ElementTree
 import datetime
 import re
-
+from xml.etree import ElementTree
+from xml.sax.saxutils import escape
 from cStringIO import StringIO
 
 class Output():
@@ -82,9 +82,8 @@ class TeXOutput(Output):
 		if type(text).__name__ == "str" or type(text).__name__ == "unicode":
 			text = text.replace("\\", "\\textbackslash ")
 			text = text.replace("~", "\\textasciitilde ")
-			text = text.replace(">", "\\rangle")
-			text = text.replace("<", "\\langle")
-			text = re.sub(r"(#|&|\$|%|{|}|\[|\])", r"\\\1", text)
+			text = re.sub(r"(#|&|\$|%|{|}|_)", r"\\\1", text)
+			text = re.sub(r"\"([^\"]*)\"", r"\\enquote{\1}", text)
 		return text
 
 	def getvalue(self):
@@ -151,10 +150,22 @@ class MDOutput(Output):
 	def __init__(self):
 		self.o = StringIO()
 
+	def _escape(self, text):
+		if type(text).__name__ == "dict":
+			for key, item in text.items():
+				text[key] = self._escape(item)
+		if type(text).__name__ == "list":
+			for i, item in enumerate(text):
+				text[i] = self._escape(item)
+		if type(text).__name__ == "str" or type(text).__name__ == "unicode":
+			text = escape(text)
+		return text
+
 	def getvalue(self):
 		return self.o.getvalue()
 
 	def Metadata(self, data):
+		data = self._escape(data)
 		at = unicode()
 		for author in data["authors"]:
 			at += "- [%(fullname)s](%(uri)s) - %(email)s" % author
@@ -171,20 +182,20 @@ Authors
 """ % data)
 
 	def AppendSection(self, title, text, level):
-		self.o.write("#" * (level+2) + " " + title + "\n")
+		self.o.write("#" * (level+2) + " " + self._escape(title) + "\n")
 		
 		for element in list(text):
 			if element.tag == "section":
 				continue
 
 			if element.tag == "t" and element.text:
-				self.o.write(element.text + "\n")
+				self.o.write(self._escape(element.text) + "\n")
 			if element.tag == "list":
 				style = "- "
 				if element.get("style") == "numbers":
 					style = "1. "
 				for point in list(element):
-					self.o.write(style + point.text + "\n")
+					self.o.write(style + self._escape(point.text) + "\n")
 			if element.tag == "texttable":
 				self.o.write("(Here would be a table, but markdown doesn't support tables. Sorry!\n")
 
@@ -222,7 +233,8 @@ class RFCParser():
 		md["area"]  = self.title.find("area").text
 		md["workgroup"] = self.title.find("workgroup").text
 		md["abstract"] = self.parse_text(self.title.find("abstract").findall("t"))
-		return md
+
+		return self.o._escape(md)
 
 	def handle_section(self, element, level):
 		self.o.AppendSection(element.get("title"), element, level)
