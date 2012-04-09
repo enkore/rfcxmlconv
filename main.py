@@ -63,6 +63,11 @@ class TeXOutput(Output):
 		"hanging": "description",
 		"empty": "itemize",
 	}
+	_alignments = {
+		"center": "c",
+		"left": "l",
+		"right": "r",
+	}
 
 	def __init__(self):
 		self.o = StringIO()
@@ -77,7 +82,9 @@ class TeXOutput(Output):
 		if type(text).__name__ == "str" or type(text).__name__ == "unicode":
 			text = text.replace("\\", "\\textbackslash ")
 			text = text.replace("~", "\\textasciitilde ")
-			text = re.sub(r"(\$|%|{|}|\[|\])", r"\\\1", text)
+			text = text.replace(">", "\\rangle")
+			text = text.replace("<", "\\langle")
+			text = re.sub(r"(#|&|\$|%|{|}|\[|\])", r"\\\1", text)
 		return text
 
 	def getvalue(self):
@@ -107,16 +114,36 @@ class TeXOutput(Output):
 			if element.tag == "list":
 				style = self._list_styles[element.get("style")]
 				
-				self.o.write("\\begin{" + style + "}")
+				self.o.write("\\begin{" + style + "}\n")
 				for point in list(element):
 					if style == "description":
 						self.o.write("\\item[" + self._escape(point.get("hangText")) + "] ")
 					else:
 						self.o.write("\\item ")
-					self.o.write(self._escape(point.text))
-				self.o.write("\\end{" + style + "}")
+					self.o.write(self._escape(point.text) + "\n")
+				self.o.write("\\end{" + style + "}\n")
 			if element.tag == "texttable":
-				self.o.write("(Here would be a table, but that's not implemented yet. Sorry!\n")
+				columns = element.findall("ttcol")
+				cc = len(columns)
+
+				self.o.write("\\begin{tabular}{|" + "|".join( [self._alignments[e.get("align", "center")] for e in columns] ) + "|}\n")
+				self.o.write("\\cline{1-%d}\n" % cc)
+				self.o.write(" & ".join( [self._escape(e.text) for e in columns]) + "\\tabularnewline\n")
+				self.o.write("\\cline{1-%d}\n" % cc)
+
+				cells = element.findall("c")
+				i = 0
+				for cell in cells:
+					if i == cc:
+						i = 0
+						self.o.write("\\tabularnewline\n\\hline\n")
+					self.o.write(self._escape(cell.text))
+					i += 1
+					if i < cc:
+						self.o.write(" & ")
+
+				self.o.write("\\tabularnewline\n\\cline{1-%d}\n" % cc)
+				self.o.write("\\end{tabular}\n")
 
 			self.o.write("\n")
 
@@ -149,7 +176,7 @@ Authors
 		for element in list(text):
 			if element.tag == "section":
 				continue
-			
+
 			if element.tag == "t" and element.text:
 				self.o.write(element.text + "\n")
 			if element.tag == "list":
