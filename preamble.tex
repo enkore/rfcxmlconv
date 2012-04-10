@@ -10,7 +10,7 @@
  {hyperref}
 
 \newcommand{\pt}{%(title)s}
-\newcommand{\st}{%(area)s -- Workgroup: %(workgroup)s}
+\newcommand{\st}{%(area)s -- Workgroup: %(workgroup)s\\%(rfc)s}
 
 \renewcommand{\sfdefault}{cmbr}
 \renewcommand{\familydefault}{\sfdefault}
@@ -21,6 +21,7 @@
 \begin{document}
 \title{\pt}
 \subtitle{\st}
+\author{%(authors)s}
 
 \maketitle
 

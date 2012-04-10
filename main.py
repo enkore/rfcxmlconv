@@ -105,47 +105,54 @@ class TeXOutput(Output):
 
 		self.o.write("\\" + self._section_labels[level] + "{" + title + "}\n")
 
-		for element in list(text):
-			if element.tag == "section":
-				continue
+		[self._do_element(e) for e in list(text)]
 
-			if element.tag == "t" and element.text:
-				self.o.write(self._escape(element.text) + "\n")
-			if element.tag == "list":
-				style = self._list_styles[element.get("style")]
-				
-				self.o.write("\\begin{" + style + "}\n")
-				for point in list(element):
-					if style == "description":
-						self.o.write("\\item[" + self._escape(point.get("hangText")) + "] ")
-					else:
-						self.o.write("\\item ")
-					self.o.write(self._escape(point.text) + "\n")
-				self.o.write("\\end{" + style + "}\n")
-			if element.tag == "texttable":
-				columns = element.findall("ttcol")
-				cc = len(columns)
+	def _do_element(self, element):
+		if element.tag == "t" and element.text:
+			self.o.write(self._escape(element.text) + "\n")
+			[self._do_element(e) for e in list(element)]
+		if element.tag == "xref":
+			self.o.write(element.text)
+		if element.tag == "list":
+			style = self._list_styles[element.get("style")]
+			
+			self.o.write("\\begin{" + style + "}\n")
+			for point in list(element):
+				text = self._escape(reduce(lambda u, v: u+v, [f for f in point.itertext()]))
+				if style == "description":
+					self.o.write("\\item[" + self._escape(point.get("hangText")) + "] ")
+				else:
+					self.o.write("\\item ")
+				self.o.write(text + "\n")
+			self.o.write("\\end{" + style + "}\n")
+		if element.tag == "figure":
+			self.o.write("\\begin{verbatim}\n")
+			self.o.write(element.find("artwork").text)
+			self.o.write("\\end{verbatim}\n")
+		if element.tag == "texttable":
+			columns = element.findall("ttcol")
+			cc = len(columns)
 
-				self.o.write("\\begin{tabular}{|" + "|".join( [self._alignments[e.get("align", "center")] for e in columns] ) + "|}\n")
-				self.o.write("\\cline{1-%d}\n" % cc)
-				self.o.write(" & ".join( [self._escape(e.text) for e in columns]) + "\\tabularnewline\n")
-				self.o.write("\\cline{1-%d}\n" % cc)
+			self.o.write("\\begin{tabular}{|" + "|".join( [self._alignments[e.get("align", "center")] for e in columns] ) + "|}\n")
+			self.o.write("\\cline{1-%d}\n" % cc)
+			self.o.write(" & ".join( [self._escape(e.text) for e in columns]) + "\\tabularnewline\n")
+			self.o.write("\\cline{1-%d}\n" % cc)
 
-				cells = element.findall("c")
-				i = 0
-				for cell in cells:
-					if i == cc:
-						i = 0
-						self.o.write("\\tabularnewline\n\\hline\n")
-					self.o.write(self._escape(cell.text))
-					i += 1
-					if i < cc:
-						self.o.write(" & ")
+			cells = element.findall("c")
+			i = 0
+			for cell in cells:
+				if i == cc:
+					i = 0
+					self.o.write("\\tabularnewline\n\\hline\n")
+				self.o.write(self._escape(cell.text))
+				i += 1
+				if i < cc:
+					self.o.write(" & ")
 
-				self.o.write("\\tabularnewline\n\\cline{1-%d}\n" % cc)
-				self.o.write("\\end{tabular}\n")
+			self.o.write("\\tabularnewline\n\\cline{1-%d}\n" % cc)
+			self.o.write("\\end{tabular}\n")
 
-			self.o.write("\n")
+		self.o.write("\n")
 
 class MDOutput(Output):
 	def __init__(self):
