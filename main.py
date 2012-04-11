@@ -92,11 +92,13 @@ class TeXOutput(Output):
 		return text
 
 	def getvalue(self):
+		basename, ext = os.path.splitext(infile)
+		outfile = basename + output.extension
 		return self.o.getvalue() + "\\end{document}"
 
 	def Compile(self, file):
-		print "Compiling %s now" % file
-		call(["pdflatex", file])
+		print "Compiling %s..." % file
+		call(["pdflatex", "-interaction=batchmode", "-quiet", "-output-directory=%s" % os.path.dirname(file), file])
 
 	def Metadata(self, data):
 		data = self._escape(data)
@@ -118,6 +120,7 @@ class TeXOutput(Output):
 	def _do_element(self, element):
 		if element.tag == "t" and element.text:
 			self.o.write(self._escape(element.text) + "\n")
+		if element.tag == "t":
 			[self._do_element(e) for e in list(element)]
 		if element.tag == "xref":
 			self.o.write(element.text)
@@ -233,6 +236,7 @@ Authors
 	def _do_element(self, element):
 		if element.tag == "t" and element.text:
 			self.o.write(self._escape(element.text) + "\n")
+		if element.tag == "t":
 			[self._do_element(e) for e in list(element)]
 		if element.tag == "xref":
 			self.o.write("[%s](http://www.ietf.org/rfc/%s.txt)" % (element.text, element.get("target").lower()))
@@ -340,6 +344,7 @@ if __name__ == "__main__":
 	}
 
 	for infile in args.file:
+		print "Processing %s..." % infile
 		output = output_modules[args.format]()
 		rfcp = RFCParser(ElementTree.fromstring(open(infile).read()), output)
 		
