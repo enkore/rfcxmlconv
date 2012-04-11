@@ -15,7 +15,7 @@ format may be either markdown (default) or latex.
 
 file is the input file.
 
-Output is written to terminal.
+Output is written to terminal. Both output methods support nearly all features of RFC2629-like documents, such as: nested sections, paragraphs, tables, lists, artwork etc.
 
 ## License
 
