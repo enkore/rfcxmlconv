@@ -324,12 +324,11 @@ if __name__ == "__main__":
 	parser.add_argument("file", help="Input XML")
 
 	args = parser.parse_args()
-
-	output = Output()
-	if args.format == "markdown":
-		output = MDOutput()
-	if args.format == "latex":
-		output = TeXOutput()
+	
+	output = {
+		"markdown": MDOutput,
+		"latex": TeXOutput,
+	}[args.format]()
 
 	rfcp = RFCParser(ElementTree.fromstring(open(args.file).read()), output)
 	
