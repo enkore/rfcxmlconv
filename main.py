@@ -43,7 +43,7 @@ class Output():
 		#	area
 		#	workgroup
 		#	abstract
-		print data
+		pass
 
 	def AppendSection(self, title, text, level):
 		# title
@@ -53,8 +53,7 @@ class Output():
 		#	0 = section
 		#	1 = subsection
 		#	2 = subsubsection
-		print title, level
-		print text
+		pass
 
 class TeXOutput(Output):
 	extension = ".tex"
