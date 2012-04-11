@@ -14,11 +14,11 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import argparse
 import datetime
 import re
 import sys
+import os
 from xml.etree import ElementTree
 from xml.sax.saxutils import escape
 from cStringIO import StringIO
@@ -57,7 +57,8 @@ class Output():
 		print text
 
 class TeXOutput(Output):
-	_section_labels = ["section", "subsection", "subsubsection"]
+	extension = ".tex"
+	_section_labels = ["section", "subsection", "subsubsection", "subsubsubsection", "paragraph", "subparagraph"]
 	_list_styles = {
 		"numbers": "enumerate",
 		"symbols": "itemize",
@@ -155,6 +156,8 @@ class TeXOutput(Output):
 		self.o.write("\n")
 
 class MDOutput(Output):
+	extension = ".md"
+
 	def __init__(self):
 		self.o = StringIO()
 
@@ -302,7 +305,7 @@ class RFCParser():
 		md["area"]  = self.title.find("area").text
 		md["workgroup"] = self.title.find("workgroup").text
 		md["abstract"] = self.parse_text(self.title.find("abstract").findall("t"))
-		md["rfc"] = "RFC X" + self.root.get("number")
+		md["rfc"] = "RFC X" + self.root.get("number", "")
 
 		return self.o._escape(md)
 
@@ -330,5 +333,8 @@ if __name__ == "__main__":
 		output = TeXOutput()
 
 	rfcp = RFCParser(ElementTree.fromstring(open(args.file).read()), output)
-	print output.getvalue()
+	
+	basename, ext = os.path.splitext(args.file)
+	with open(basename + output.extension, "w+") as f:
+		f.write(output.getvalue())
 
