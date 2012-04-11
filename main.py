@@ -241,7 +241,26 @@ Authors
 				if len(line):
 					self.o.write("`" + line + "`\n\n")
 		if element.tag == "texttable":
-			self.o.write("(Here would be a table, but markdown doesn't support tables. Sorry!\n")
+			columns = element.findall("ttcol")
+			cc = len(columns)
+
+			self.o.write("<table>\n")
+			self.o.write("\t<tr>\n")
+			self.o.write("\n".join( ["\t\t<th>%s</th>" % self._escape(e.text) for e in columns]))
+			self.o.write("\n\t</tr>\n")
+
+			cells = element.findall("c")
+			i = 0
+			self.o.write("\t<tr>\n")
+			for cell in cells:
+				if i == cc:
+					i = 0
+					self.o.write("\t</tr>\n\t<tr>\n")
+				self.o.write("\t\t<td>%s</td>\n" % self._escape(cell.text))
+				i += 1
+
+			self.o.write("\t</tr>\n")
+			self.o.write("</table>\n")
 
 		self.o.write("\n")
 
