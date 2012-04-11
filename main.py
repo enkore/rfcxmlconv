@@ -19,6 +19,7 @@ import datetime
 import re
 import sys
 import os
+from subprocess import call
 from xml.etree import ElementTree
 from xml.sax.saxutils import escape
 from cStringIO import StringIO
@@ -28,6 +29,9 @@ class Output():
 		pass
 
 	def getvalue(self):
+		pass
+
+	def Compile(self, file):
 		pass
 
 	def Metadata(self, data):
@@ -57,7 +61,7 @@ class Output():
 
 class TeXOutput(Output):
 	extension = ".tex"
-	_section_labels = ["section", "subsection", "subsubsection", "subsubsubsection", "paragraph", "subparagraph"]
+	_section_labels = ["section", "subsection", "subsubsection", "paragraph", "subparagraph"]
 	_list_styles = {
 		"numbers": "enumerate",
 		"symbols": "itemize",
@@ -90,6 +94,10 @@ class TeXOutput(Output):
 	def getvalue(self):
 		return self.o.getvalue() + "\\end{document}"
 
+	def Compile(self, file):
+		print "Compiling %s now" % file
+		call(["pdflatex", file])
+
 	def Metadata(self, data):
 		data = self._escape(data)
 
@@ -103,7 +111,7 @@ class TeXOutput(Output):
 	def AppendSection(self, title, text, level):
 		title = self._escape(title)
 
-		self.o.write("\\" + self._section_labels[level] + "{" + title + "}\n")
+		self.o.write("\\" + self._section_labels[level] + "{" + title + "}\n\n")
 
 		[self._do_element(e) for e in list(text)]
 
@@ -321,18 +329,24 @@ class RFCParser():
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Tool to convert RFC XML to various output formats")
 	parser.add_argument("-f", "--format", default="markdown", help="Output format. Either markdown or latex.")
-	parser.add_argument("file", help="Input XML")
+	parser.add_argument("-c", "--compile", action="store_const", const=True, default=False, help="Compile the resulting document, if possible.")
+	parser.add_argument("file", help="Input XML", nargs="*")
 
 	args = parser.parse_args()
 	
-	output = {
+	output_modules = {
 		"markdown": MDOutput,
 		"latex": TeXOutput,
-	}[args.format]()
+	}
 
-	rfcp = RFCParser(ElementTree.fromstring(open(args.file).read()), output)
-	
-	basename, ext = os.path.splitext(args.file)
-	with open(basename + output.extension, "w+") as f:
-		f.write(output.getvalue())
+	for infile in args.file:
+		output = output_modules[args.format]()
+		rfcp = RFCParser(ElementTree.fromstring(open(infile).read()), output)
+		
+		basename, ext = os.path.splitext(infile)
+		outfile = basename + output.extension
+		with open(outfile, "w") as f:
+			f.write(output.getvalue())
 
+		if args.compile:
+			output.Compile(outfile)

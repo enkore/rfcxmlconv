@@ -9,9 +9,10 @@ rfcxmlconv is a small tool, that converts RFC2629-like documents to Markdown or 
 
 ## Usage
 
-`main.py -f <format> <file>`
+`main.py [-f <format>] [-c] <file> <file> <file> ...`
 
 - `format` may be either markdown (default) or latex.
+- `-c` compiles the resulting documents, markdown does nothing and latex calls pdflatex here.
 - `file` is the input file.
 - Output is written to the same file as `file`, except for the file extensions, which is choosen automatically.
 
