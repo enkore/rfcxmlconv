@@ -15,6 +15,8 @@ rfcxmlconv is a small tool, that converts RFC2629-like documents to Markdown or 
 - `file` is the input file.
 - Output is written to standard output, use shell redirects for file access: `./main.py -f latex bullocks.xml > bullocks.tex && pdflatex bullocks.tex`
 
+Both output methods support nearly all features of RFC2629-like documents, such as nested sections, paragraphs, tables, lists, figures/artwork etc.
+
 ## License
 
 GPLv2
