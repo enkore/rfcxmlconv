@@ -92,8 +92,6 @@ class TeXOutput(Output):
 		return text
 
 	def getvalue(self):
-		basename, ext = os.path.splitext(infile)
-		outfile = basename + output.extension
 		return self.o.getvalue() + "\\end{document}"
 
 	def Compile(self, file):
@@ -288,6 +286,7 @@ class RFCParser():
 		self.middle = self.root.find("middle")
 		self.back = self.root.find("back")
 
+	def run(self):
 		self.o.Metadata(self.collect_metadata())
 		self.walk()
 
@@ -318,7 +317,7 @@ class RFCParser():
 		md["abstract"] = self.parse_text(self.title.find("abstract").findall("t"))
 		md["rfc"] = "RFC X" + self.root.get("number", "")
 
-		return self.o._escape(md)
+		return md
 
 	def handle_section(self, element, level):
 		self.o.AppendSection(element.get("title"), element, level)
@@ -330,10 +329,11 @@ class RFCParser():
 		for section in self.middle.findall("section"):
 			self.handle_section(section, 0)
 
-if __name__ == "__main__":
+def main():
 	parser = argparse.ArgumentParser(description="Tool to convert RFC XML to various output formats")
 	parser.add_argument("-f", "--format", default="markdown", help="Output format. Either markdown or latex.")
 	parser.add_argument("-c", "--compile", action="store_const", const=True, default=False, help="Compile the resulting document, if possible.")
+	parser.add_argument("-t", "--title", action="store_const", const=True, default=False, help="Print title of document and exit.")
 	parser.add_argument("file", help="Input XML", nargs="*")
 
 	args = parser.parse_args()
@@ -344,14 +344,29 @@ if __name__ == "__main__":
 	}
 
 	for infile in args.file:
-		print "Processing %s..." % infile
+		if not args.title:
+			print "Processing %s..." % infile
+
 		output = output_modules[args.format]()
 		rfcp = RFCParser(ElementTree.fromstring(open(infile).read()), output)
+
+		if args.title:
+			print rfcp.collect_metadata()["rfc"] + rfcp.collect_metadata()["title"]
+			return 0
+
+		rfcp.run()
 		
 		basename, ext = os.path.splitext(infile)
 		outfile = basename + output.extension
-		with open(outfile, "w") as f:
+		with open(outfile, "w+") as f:
 			f.write(output.getvalue())
 
 		if args.compile:
 			output.Compile(outfile)
+
+def get_title(file):
+	rfcp = RFCParser(ElementTree.fromstring(open(file).read()), Output())
+	return "%s %s" % (rfcp.collect_metadata()["rfc"], rfcp.collect_metadata()["title"])
+
+if __name__ == "__main__":
+	sys.exit(main())

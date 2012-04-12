@@ -1,4 +1,4 @@
-\documentclass[12pt,a4paper,english,DIV=20,oneside,parskip=half]{scrartcl}
+\documentclass[12pt,a4paper,english,DIV=15,oneside,parskip=half]{scrartcl}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -8,6 +8,16 @@
  bookmarks=true,bookmarksnumbered=false,bookmarksopen=false,
  breaklinks=true,pdfborder={0 0 0},backref=none,colorlinks=false]
  {hyperref}
+\usepackage{scrpage2}
+\pagestyle{scrheadings}
+
+%% Page head/foot setup
+\ihead{%(rfc)s}
+\chead{%(title)s}
+\ohead{%(area)s}
+\ifoot{%(authors)s}
+\cfoot{\pagemark}
+\ofoot{%(workgroup)s}
 
 \newcommand{\pt}{%(title)s}
 \newcommand{\st}{%(area)s -- Workgroup: %(workgroup)s\\%(rfc)s}
