@@ -142,10 +142,8 @@ class TeXOutput(Output):
 			columns = element.findall("ttcol")
 			cc = len(columns)
 
-			self.o.write("\\begin{tabular}{|" + "|".join( [self._alignments[e.get("align", "center")] for e in columns] ) + "|}\n")
-			self.o.write("\\cline{1-%d}\n" % cc)
-			self.o.write(" & ".join( [self._escape(e.text) for e in columns]) + "\\tabularnewline\n")
-			self.o.write("\\cline{1-%d}\n" % cc)
+			self.o.write("\\begin{tabular}{|" + "|".join( [self._alignments[e.get("align", "center")] for e in columns] ) + "|}\n\hline\n")
+			self.o.write(" & ".join( [self._escape(e.text) for e in columns]) + "\\tabularnewline\n\hline\n\hline\n")
 
 			cells = element.findall("c")
 			i = 0
