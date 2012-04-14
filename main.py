@@ -43,7 +43,7 @@ class Output():
 		#		organization
 		#		email
 		#		uri
-		#	date = date()
+		#	date
 		#	area
 		#	workgroup
 		#	abstract
@@ -95,7 +95,6 @@ class TeXOutput(Output):
 		return self.o.getvalue() + "\\end{document}"
 
 	def Compile(self, file):
-		print "Compiling %s..." % file
 		call(["pdflatex", "-interaction=batchmode", "-quiet", "-output-directory=%s" % os.path.dirname(file), file])
 
 	def Metadata(self, data):
@@ -123,7 +122,7 @@ class TeXOutput(Output):
 		if element.tag == "xref":
 			self.o.write(element.text)
 		if element.tag == "list":
-			style = self._list_styles[element.get("style")]
+			style = self._list_styles[element.get("style", "symbols")]
 			
 			self.o.write("\\begin{" + style + "}\n")
 			for point in list(element):
@@ -309,7 +308,7 @@ class RFCParser():
 				"uri": self._checked_text(author.find("address/uri")),
 			})
 		md["authors"] = authors
-		#md["date"] = datetime.now()
+		md["date"] = "%s %s" % (self.title.find("date").get("month"), self.title.find("date").get("year"))
 		md["area"]  = self.title.find("area").text
 		md["workgroup"] = self.title.find("workgroup").text
 		md["abstract"] = self.parse_text(self.title.find("abstract").findall("t"))
