@@ -24,8 +24,8 @@ from xml.etree import ElementTree
 from xml.sax.saxutils import escape
 from cStringIO import StringIO
 
-class Output():
-	def __init__(self):
+class Output(object):
+	def __init__(self, parser):
 		pass
 
 	def getvalue(self):
@@ -49,7 +49,7 @@ class Output():
 		#	abstract
 		pass
 
-	def AppendSection(self, title, text, level):
+	def AppendSection(self, title, text, level, anchor):
 		# title
 		# nachor (optional)
 		# text
@@ -57,6 +57,7 @@ class Output():
 		#	0 = section
 		#	1 = subsection
 		#	2 = subsubsection
+		# anchor
 		pass
 
 class TeXOutput(Output):
@@ -74,8 +75,9 @@ class TeXOutput(Output):
 		"right": "r",
 	}
 
-	def __init__(self):
+	def __init__(self, parser):
 		self.o = StringIO()
+		self.p = parser
 
 	def _escape(self, text):
 		if type(text).__name__ == "dict":
@@ -87,6 +89,7 @@ class TeXOutput(Output):
 		if type(text).__name__ == "str" or type(text).__name__ == "unicode":
 			text = text.replace("\\", "\\textbackslash ")
 			text = text.replace("~", "\\textasciitilde ")
+			text = text.replace("^", "\\verb|^|")
 			text = re.sub(r"(#|&|\$|%|{|}|_)", r"\\\1", text)
 			text = re.sub(r"\"([^\"]*)\"", r"\\enquote{\1}", text)
 		return text
@@ -95,7 +98,7 @@ class TeXOutput(Output):
 		return self.o.getvalue() + "\\end{document}"
 
 	def Compile(self, file):
-		call(["pdflatex", "-interaction=batchmode", "-quiet", "-output-directory=%s" % os.path.dirname(file), file])
+		[call(["pdflatex", "-interaction=batchmode", "-quiet", "-output-directory=%s" % os.path.dirname(file), file]) for i in [1,2,3]]
 
 	def Metadata(self, data):
 		data = self._escape(data)
@@ -107,20 +110,28 @@ class TeXOutput(Output):
 
 		self.o.write(preamble)
 
-	def AppendSection(self, title, text, level):
+	def AppendSection(self, title, text, level, anchor):
 		title = self._escape(title)
 
-		self.o.write("\\" + self._section_labels[level] + "{" + title + "}\n\n")
+		self.o.write("\\" + self._section_labels[level] + "{" + title + "}")
+		if anchor:
+			self.o.write("\\label{" + anchor + "}")
+
+		self.o.write("\n\n")
 
 		[self._do_element(e) for e in list(text)]
 
 	def _do_element(self, element):
 		if element.tag == "t" and element.text:
-			self.o.write(self._escape(element.text) + "\n")
+			self.o.write(self._escape(element.text))
 		if element.tag == "t":
 			[self._do_element(e) for e in list(element)]
 		if element.tag == "xref":
-			self.o.write(element.text)
+			if not element.text:
+				#self.o.write(self.p.sections[element.get("target")].replace(" ", "~") + "~\\ref{" + element.get("target") + "}") # Verbose style
+				self.o.write("\\nameref{" + element.get("target") + "}") # Cleaner, better
+			else:
+				self.o.write(element.text)
 		if element.tag == "list":
 			style = self._list_styles[element.get("style", "symbols")]
 			
@@ -224,7 +235,7 @@ Authors
 *%(abstract)s*
 """ % data)
 
-	def AppendSection(self, title, text, level):
+	def AppendSection(self, title, text, level, anchor):
 		self.o.write("#" * (level+2) + " " + self._escape(title) + "\n")
 		
 		for element in list(text):
@@ -280,12 +291,14 @@ Authors
 
 class RFCParser():
 	def __init__(self, dom, output):
-		self.o = output
+		self.o = output(self)
 
 		self.root = dom
 		self.title = self.root.find("front")
 		self.middle = self.root.find("middle")
 		self.back = self.root.find("back")
+
+		self.sections = dict()
 
 	def run(self):
 		self.o.Metadata(self.collect_metadata())
@@ -318,13 +331,18 @@ class RFCParser():
 		md["abstract"] = self.parse_text(self.title.find("abstract").findall("t"))
 		md["rfc"] = "RFC X" + self.root.get("number", "")
 
+		def _findsec(element):
+			if element.get("anchor", None):
+				self.sections[element.get("anchor")] = element.get("title")
+			[_findsec(section) for section in element.findall("section")]
+		[_findsec(section) for section in self.middle.findall("section")]
+
 		return md
 
 	def handle_section(self, element, level):
-		self.o.AppendSection(element.get("title"), element, level)
+		self.o.AppendSection(element.get("title"), element, level, element.get("anchor", None))
 
-		for section in element.findall("section"):
-			self.handle_section(section, level+1)
+		[self.handle_section(section, level+1) for section in element.findall("section")]
 
 	def walk(self):
 		for section in self.middle.findall("section"):
@@ -348,7 +366,7 @@ def main():
 		if not args.title:
 			print "Processing %s..." % infile
 
-		output = output_modules[args.format]()
+		output = output_modules[args.format]
 		rfcp = RFCParser(ElementTree.fromstring(open(infile).read()), output)
 
 		if args.title:
@@ -360,10 +378,10 @@ def main():
 		basename, ext = os.path.splitext(infile)
 		outfile = basename + output.extension
 		with open(outfile, "w+") as f:
-			f.write(output.getvalue())
+			f.write(rfcp.o.getvalue())
 
 		if args.compile:
-			output.Compile(outfile)
+			rfcp.o.Compile(outfile)
 
 def get_title(file):
 	rfcp = RFCParser(ElementTree.fromstring(open(file).read()), Output())
