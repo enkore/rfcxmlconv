@@ -157,6 +157,8 @@ class TeXOutput(Output):
 
 			self.o.write("\\tabularnewline\n\\cline{1-%d}\n" % cc)
 			self.o.write("\\end{tabular}\n")
+		if element.tag != "t" and element.tail:
+			self.o.write(self._escape(element.tail))
 
 		self.o.write("\n")
 
@@ -270,6 +272,8 @@ Authors
 
 			self.o.write("\t</tr>\n")
 			self.o.write("</table>\n")
+		if element.tag != "t" and element.tail:
+			self.o.write(self._escape(element.tail))
 
 		self.o.write("\n")
 
