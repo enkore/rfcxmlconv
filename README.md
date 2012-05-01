@@ -20,4 +20,4 @@ Both output methods support nearly all features of RFC2629-like documents, such 
 
 ## License
 
-GPLv2
+GPLv3
