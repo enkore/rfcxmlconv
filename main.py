@@ -152,7 +152,7 @@ class TeXOutput(Output):
 			columns = element.findall("ttcol")
 			cc = len(columns)
 
-			self.o.write("\\begin{tabular}{|" + "|".join( [self._alignments[e.get("align", "center")] for e in columns] ) + "|}\n\hline\n")
+			self.o.write("\n\n\\begin{tabular}{|" + "|".join( [self._alignments[e.get("align", "center")] for e in columns] ) + "|}\n\hline\n")
 			self.o.write(" & ".join( [self._escape(e.text) for e in columns]) + "\\tabularnewline\n\hline\n\hline\n")
 
 			cells = element.findall("c")
@@ -167,7 +167,7 @@ class TeXOutput(Output):
 					self.o.write(" & ")
 
 			self.o.write("\\tabularnewline\n\\cline{1-%d}\n" % cc)
-			self.o.write("\\end{tabular}\n")
+			self.o.write("\\end{tabular}\n\n")
 		if element.tag != "t" and element.tail:
 			self.o.write(self._escape(element.tail))
 
@@ -176,7 +176,7 @@ class TeXOutput(Output):
 class MDOutput(Output):
 	extension = ".md"
 
-	def __init__(self):
+	def __init__(self, parser):
 		self.o = StringIO()
 
 	def _trim(self, docstring):
@@ -253,15 +253,16 @@ Authors
 			if element.get("style") == "numbers":
 				style = "1. "
 			for point in list(element):
-				text = self._escape(reduce(lambda u, v: u+v, [f for f in point.itertext()]))
+				text = reduce(lambda u, v: u+" "+v, [self._escape(f) for f in point.itertext()])
 				if element.get("style") == "hanging":
 					self.o.write(style + "**%s** %s\n" % (self._escape(point.get("hangText")), text))
 				else:
 					self.o.write(style + text + "\n")
 		if element.tag == "figure":
+			self.o.write("\n");
 			for line in element.find("artwork").text.splitlines():
 				if len(line):
-					self.o.write("`" + line + "`\n\n")
+					self.o.write("    " + line + "\n")
 		if element.tag == "texttable":
 			columns = element.findall("ttcol")
 			cc = len(columns)
@@ -384,7 +385,7 @@ def main():
 			rfcp.o.Compile(outfile)
 
 def get_title(file):
-	rfcp = RFCParser(ElementTree.fromstring(open(file).read()), Output())
+	rfcp = RFCParser(ElementTree.fromstring(open(file).read()), Output)
 	return "%s %s" % (rfcp.collect_metadata()["rfc"], rfcp.collect_metadata()["title"])
 
 if __name__ == "__main__":
